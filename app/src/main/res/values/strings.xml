@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">簡單農民曆</string>
+    <string name="widget_description">顯示今日日期、農曆、節氣與神明生日</string>
+    <string name="widget_title">今日農民曆</string>
+</resources>

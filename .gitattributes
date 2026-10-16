@@ -1,0 +1,10 @@
+# 版本庫內文字檔統一以 LF 儲存，避免跨平台換行差異
+* text=auto eol=lf
+
+# Windows 批次檔使用 CRLF
+*.bat text eol=crlf
+
+# 二進位檔
+*.jar binary
+*.png binary
+*.apk binary
