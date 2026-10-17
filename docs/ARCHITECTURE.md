@@ -39,10 +39,11 @@
 │     │  │  ├─ MainActivity.kt          單一 Activity、Compose 畫面
 │     │  │  ├─ MainViewModel.kt         設定狀態與小工具更新
 │     │  │  ├─ data/
-│     │  │  │  ├─ AlmanacRepository.kt  每日資訊查詢、農曆計算
+│     │  │  │  ├─ AlmanacRepository.kt  每日資訊查詢、農曆計算與月曆查詢
 │     │  │  │  ├─ SolarTerms.kt         二十四節氣天文演算法
 │     │  │  │  ├─ FestivalTable.kt      農曆歲時節日對照表
 │     │  │  │  ├─ DeityBirthdays.kt     台灣神明生日對照表
+│     │  │  │  ├─ LunarNames.kt         農曆月名與日名轉換
 │     │  │  │  └─ ThemePreferences.kt   主題設定模型與 DataStore
 │     │  │  ├─ ui/theme/AppTheme.kt     主題配色與系統列樣式
 │     │  │  └─ widget/LunarWidget.kt    Glance 桌面小工具
@@ -50,7 +51,9 @@
 │     └─ test/java/com/simplelunar/calendar/
 │        ├─ ui/theme/AppThemeTest.kt
 │        ├─ data/SolarTermsTest.kt
+│        ├─ data/SolarTermsTermOnTest.kt
 │        ├─ data/FestivalTableTest.kt
+│        ├─ data/AlmanacRepositoryMonthTest.kt
 │        └─ data/DeityBirthdaysTest.kt
 ├─ docs/                               專案文件
 ├─ build.gradle.kts / settings.gradle.kts
@@ -62,8 +65,10 @@
 ### 3.1 呈現層（Presentation）
 
 - `MainActivity`：唯一的 `ComponentActivity`，`setContent` 啟動 `SimpleLunarTheme` 與 `SimpleLunarApp`。
-- `Screen`（`TODAY`、`SETTINGS`）：以 `rememberSaveable` 保存的畫面狀態；設定頁以 `BackHandler` 攔截系統返回鍵回到首頁。
-- 首頁：`TodayScreen` → `DateHero`（日期、農曆、日期切換）、`OccasionCard`（節氣與節日）、`DeityBirthdayCard`（神明生日）、日期選擇對話框。
+- `Screen`（`TODAY`、`SETTINGS`、`CALENDAR`、`DEITIES`）：以 `rememberSaveable` 保存的畫面狀態；非首頁時以 `BackHandler` 攔截系統返回鍵回到首頁。
+- 首頁：`TodayScreen` → `DateHero`（日期、農曆、日期切換）、`OccasionCard`（節氣與節日）、`DeityBirthdayCard`（神明生日，含「查看全部」）、日期選擇對話框。
+- 月曆頁：`CalendarScreen` → `MonthHeader`（上／下個月、年月選擇）、`WeekdayHeader`、`CalendarDayCell` 月曆格線、`MonthYearPickerDialog`（年份加減與十二個月選擇）。
+- 神明生日清單頁：`DeityListScreen`，依農曆月份分組的 `LazyColumn`。
 - 設定頁：`SettingsScreen` → 顯示模式、主題色彩、自訂色彩面板。
 
 ### 3.2 狀態層（State）
@@ -78,11 +83,13 @@
 
 - `AlmanacRepository`（`object`）：
   - `day(date)`：查詢指定日期的 `AlmanacDay`。
+  - `month(yearMonth)`：查詢整月 `CalendarMonth`（6 週 × 7 天）；`monthDates(yearMonth)` 為不依賴 ICU 的純月曆格線（供測試與節氣標記）。
   - `lunarParts(date)`：以 ICU `ChineseCalendar` 計算農曆月、日、閏月與顯示名稱。
   - `festivals(date, lunar)`：國曆與農曆節日查表，並判斷農曆除夕。
-- `SolarTerms`（`object`）：以太陽視黃經天文演算法計算二十四節氣；`currentTerm(date)` 取所選日期當下最近的節氣。
+- `SolarTerms`（`object`）：以太陽視黃經天文演算法計算二十四節氣；`currentTerm(date)` 取所選日期當下最近的節氣，`termOn(date)` 僅於交節氣當日回傳名稱，`termsInYear(year)` 提供該年全部節氣日期（含年份快取）。
 - `FestivalTable`（`object`）：農曆月→日→節日名稱清單的靜態對照，閏月回傳空清單。
-- `DeityBirthdays`（`object`）：農曆月→日→名稱清單的靜態對照，`forLunarDay(month, day, isLeap)` 於閏月回傳空清單。
+- `DeityBirthdays`（`object`）：農曆月→日→名稱清單的靜態對照；`forLunarDay(month, day, isLeap)` 於閏月回傳空清單，`all()` 依農曆月、日排序回傳全部 `DeityBirthday`。
+- `LunarNames`（`object`）：農曆月名（正月…臘月）與日名（初一…三十）轉換。
 - `ThemePreferences`：`preferencesDataStore` 擴充、`ThemeChoice`／`DisplayMode`／`ThemeSettings` 模型與存取。
 
 ### 3.4 主題層（Theme）
@@ -110,6 +117,13 @@
    │                       ├─ SolarTerms          節氣天文演算法
    │                       ├─ festivals()          節日查表與除夕判斷
    │                       └─ DeityBirthdays       農曆月日查表
+   │
+   ├─ 瀏覽月曆 → CalendarScreen
+   │                 └─ AlmanacRepository.month()
+   │                       ├─ monthDates()        純月曆格線（週日起算、6×7）
+   │                       └─ SolarTerms.termsInYear() 節氣日期與快取
+   │
+   ├─ 查看神明生日 → DeityListScreen → DeityBirthdays.all()
    │
    └─ 更改設定 → MainViewModel
                     ├─ _settings 樂觀更新
@@ -164,7 +178,7 @@ app/build/outputs/apk/prerelease/app-prerelease.apk
 .\gradlew.bat assembleDebug testDebugUnitTest lintDebug
 ```
 
-- 單元測試：`AppThemeTest`（主題色解析與內容色對比）、`SolarTermsTest`（節氣日期）、`FestivalTableTest`（農曆節日查表與閏月行為）、`DeityBirthdaysTest`（神明生日查表與閏月行為）。
+- 單元測試：`AppThemeTest`（主題色解析與內容色對比）、`SolarTermsTest`（節氣日期）、`SolarTermsTermOnTest`（交節氣當日判定與年度節氣）、`FestivalTableTest`（農曆節日查表與閏月行為）、`AlmanacRepositoryMonthTest`（月曆格線與節氣標記）、`DeityBirthdaysTest`（神明生日查表、閏月行為與全部清單排序）。
 - Lint：`lintDebug`，報告位於 `app/build/reports/lint-results-debug.html`。
 
 ## 8. 效能與相容性
@@ -178,7 +192,7 @@ app/build/outputs/apk/prerelease/app-prerelease.apk
 
 - **增量編譯錯誤 `different roots`**：專案曾被移動路徑時，Kotlin 增量快取可能失效；Gradle 會自動退回非增量編譯，可忽略。必要時刪除 `.gradle`、`.kotlin`、`app/build` 後重建。
 - **APK 無法安裝**：Debug 金鑰簽署的測試版本可能觸發未知來源或 Play Protect 提示，請僅從本專案 Release 下載。
-- **版本號顯示**：`versionName` 加上 Build Type 後綴，`prerelease` 版本顯示為 `1.0.0-prerelease`。
+- **版本號顯示**：`versionName` 加上 Build Type 後綴，`prerelease` 版本顯示為 `1.1.0-prerelease`。
 
 ## 10. 相關文件
 

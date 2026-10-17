@@ -2,14 +2,35 @@ package com.simplelunar.calendar.data
 
 import android.icu.util.ChineseCalendar
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 
 data class AlmanacDay(
     val date: LocalDate,
     val lunarDate: String,
+    val lunarMonthLabel: String,
+    val lunarDayLabel: String,
     val festivals: List<String>,
     val solarTerm: String?,
     val deityBirthdays: List<String>,
+)
+
+data class CalendarCell(
+    val day: AlmanacDay,
+    val inMonth: Boolean,
+    val termOnDay: String?,
+)
+
+data class CalendarDate(
+    val date: LocalDate,
+    val inMonth: Boolean,
+    val termOnDay: String?,
+)
+
+data class CalendarMonth(
+    val year: Int,
+    val month: Int,
+    val weeks: List<List<CalendarCell>>,
 )
 
 object AlmanacRepository {
@@ -18,6 +39,8 @@ object AlmanacRepository {
         return AlmanacDay(
             date = date,
             lunarDate = lunar.displayName,
+            lunarMonthLabel = lunar.monthLabel,
+            lunarDayLabel = lunar.dayLabel,
             festivals = festivals(date, lunar),
             solarTerm = SolarTerms.currentTerm(date),
             deityBirthdays = DeityBirthdays
@@ -26,10 +49,46 @@ object AlmanacRepository {
         )
     }
 
+    fun month(yearMonth: YearMonth): CalendarMonth {
+        val weeks = monthDates(yearMonth).map { week ->
+            week.map { cell ->
+                CalendarCell(day = day(cell.date), inMonth = cell.inMonth, termOnDay = cell.termOnDay)
+            }
+        }
+        return CalendarMonth(yearMonth.year, yearMonth.monthValue, weeks)
+    }
+
+    fun monthDates(yearMonth: YearMonth): List<List<CalendarDate>> {
+        val terms = buildMap {
+            putAll(SolarTerms.termsInYear(yearMonth.year - 1))
+            putAll(SolarTerms.termsInYear(yearMonth.year))
+            putAll(SolarTerms.termsInYear(yearMonth.year + 1))
+        }
+        val firstOfMonth = yearMonth.atDay(1)
+        // 週日起算：週日 = 0、週一 = 1 … 週六 = 6。
+        var cursor = firstOfMonth.minusDays((firstOfMonth.dayOfWeek.value % 7).toLong())
+        val weeks = ArrayList<List<CalendarDate>>(6)
+        repeat(6) {
+            val week = ArrayList<CalendarDate>(7)
+            repeat(7) {
+                week += CalendarDate(
+                    date = cursor,
+                    inMonth = YearMonth.from(cursor) == yearMonth,
+                    termOnDay = terms[cursor],
+                )
+                cursor = cursor.plusDays(1)
+            }
+            weeks += week
+        }
+        return weeks
+    }
+
     private data class LunarParts(
         val month: Int,
         val day: Int,
         val isLeapMonth: Boolean,
+        val monthLabel: String,
+        val dayLabel: String,
         val displayName: String,
     )
 
@@ -40,26 +99,9 @@ object AlmanacRepository {
         val month = calendar.get(ChineseCalendar.MONTH) + 1
         val day = calendar.get(ChineseCalendar.DAY_OF_MONTH)
         val isLeap = calendar.get(ChineseCalendar.IS_LEAP_MONTH) == 1
-        val monthName = listOf(
-            "正月", "二月", "三月", "四月", "五月", "六月",
-            "七月", "八月", "九月", "十月", "冬月", "臘月",
-        )[month - 1]
-        val dayName = when (day) {
-            10 -> "初十"
-            20 -> "二十"
-            30 -> "三十"
-            else -> {
-                val prefix = when (day) {
-                    in 1..9 -> "初"
-                    in 11..19 -> "十"
-                    in 21..29 -> "廿"
-                    else -> ""
-                }
-                val number = listOf("", "一", "二", "三", "四", "五", "六", "七", "八", "九")[day % 10]
-                prefix + number
-            }
-        }
-        return LunarParts(month, day, isLeap, "${if (isLeap) "閏" else ""}$monthName$dayName")
+        val monthLabel = "${if (isLeap) "閏" else ""}${LunarNames.monthName(month)}"
+        val dayLabel = LunarNames.dayName(day)
+        return LunarParts(month, day, isLeap, monthLabel, dayLabel, "$monthLabel$dayLabel")
     }
 
     private fun festivals(date: LocalDate, lunar: LunarParts): List<String> {

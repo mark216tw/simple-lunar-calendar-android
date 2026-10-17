@@ -3,6 +3,7 @@ package com.simplelunar.calendar.data
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.floor
 import kotlin.math.sin
 
@@ -15,6 +16,19 @@ object SolarTerms {
     )
 
     private val taipei: ZoneId = ZoneId.of("Asia/Taipei")
+
+    private val yearTerms = ConcurrentHashMap<Int, Map<LocalDate, String>>()
+
+    fun termsInYear(year: Int): Map<LocalDate, String> = yearTerms.getOrPut(year) {
+        names.indices.associate { index ->
+            jdToLocalDate(crossing(year, index * 15.0)) to names[index]
+        }
+    }
+
+    fun termOn(date: LocalDate): String? =
+        termsInYear(date.year)[date]
+            ?: termsInYear(date.year - 1)[date]
+            ?: termsInYear(date.year + 1)[date]
 
     fun currentTerm(date: LocalDate): String? {
         val candidates = ArrayList<Pair<LocalDate, String>>(names.size * 2)

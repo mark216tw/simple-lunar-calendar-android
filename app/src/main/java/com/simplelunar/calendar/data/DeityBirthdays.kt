@@ -1,5 +1,11 @@
 package com.simplelunar.calendar.data
 
+data class DeityBirthday(
+    val lunarMonth: Int,
+    val lunarDay: Int,
+    val names: List<String>,
+)
+
 object DeityBirthdays {
     private val data: Map<Int, Map<Int, List<String>>> = mapOf(
         1 to mapOf(
@@ -180,4 +186,12 @@ object DeityBirthdays {
         if (isLeap) return emptyList()
         return data[month]?.get(day).orEmpty()
     }
+
+    fun all(): List<DeityBirthday> = data.entries
+        .sortedBy { it.key }
+        .flatMap { (month, days) ->
+            days.entries.sortedBy { it.key }.map { (day, names) ->
+                DeityBirthday(lunarMonth = month, lunarDay = day, names = names)
+            }
+        }
 }

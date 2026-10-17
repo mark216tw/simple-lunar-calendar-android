@@ -68,7 +68,7 @@ app/build/outputs/apk/debug/app-debug.apk
 app/build/outputs/apk/prerelease/app-prerelease.apk
 ```
 
-版本名稱由 `app/build.gradle.kts` 的 `versionName` 加上 Build Type 後綴組成，目前為 `1.0.0-prerelease`。
+版本名稱由 `app/build.gradle.kts` 的 `versionName` 加上 Build Type 後綴組成，目前為 `1.1.0-prerelease`。
 
 ## 執行測試與靜態檢查
 
@@ -96,10 +96,11 @@ app/build/reports/lint-results-debug.html
 app/src/main/java/com/simplelunar/calendar/
   MainActivity.kt                 Compose 畫面與操作
   MainViewModel.kt                主題設定狀態
-  data/AlmanacRepository.kt       每日資訊查詢與農曆計算
+  data/AlmanacRepository.kt       每日與月曆資訊查詢、農曆計算
   data/SolarTerms.kt              二十四節氣天文演算法
   data/FestivalTable.kt           農曆歲時節日對照表
   data/DeityBirthdays.kt          台灣神明生日（農曆月日對照）
+  data/LunarNames.kt              農曆月名與日名轉換
   data/ThemePreferences.kt        DataStore 設定
   ui/theme/AppTheme.kt            主題與系統列配色
   widget/LunarWidget.kt           Glance 桌面小工具
@@ -124,7 +125,7 @@ docs/
 
 目前以 `prerelease` Build Type 產生測試用的預先發行版本：
 
-- 版本名稱：`1.0.0-prerelease`（`versionName` 加 Build Type 後綴）。
+- 版本名稱：`1.1.0-prerelease`（`versionName` 加 Build Type 後綴）。
 - 啟用 R8 壓縮與資源縮減。
 - 使用 Android 開發用金鑰（Debug 金鑰）簽署，並非正式簽署版本。
 - GitHub Release 必須標示為 **Pre-release**，並於說明明確標示為測試用途與非正式上線版本。

@@ -32,4 +32,20 @@ class DeityBirthdaysTest {
 
         assertEquals(emptyList<String>(), items)
     }
+
+    @Test
+    fun allReturnsEntriesSortedByLunarMonthAndDay() {
+        val all = DeityBirthdays.all()
+
+        assertTrue(all.isNotEmpty())
+        assertEquals(all, all.sortedWith(compareBy({ it.lunarMonth }, { it.lunarDay })))
+        assertTrue(all.all { it.names.isNotEmpty() })
+    }
+
+    @Test
+    fun allContainsJadeEmperorBirthdayEntry() {
+        val entry = DeityBirthdays.all().first { it.lunarMonth == 1 && it.lunarDay == 9 }
+
+        assertTrue(entry.names.contains("玉皇上帝大天尊聖壽"))
+    }
 }
